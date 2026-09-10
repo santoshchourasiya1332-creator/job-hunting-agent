@@ -1,0 +1,29 @@
+alloy:
+  configMap:
+    content: |
+      logging {
+        level = "warn"
+        format = "logfmt"
+      }
+      discovery.kubernetes "pods" {
+        role = "pod"
+      }
+
+      loki.source.kubernetes "pod_logs" {
+        targets = discovery.kubernetes.pods.targets
+        forward_to = [loki.write.local.receiver]
+      }
+
+      loki.write "local" {
+        endpoint {
+          url = "http://loki-gateway.job-agent.svc.cluster.local/loki/api/v1/push"
+        }
+      }
+
+resources:
+  requests:
+    cpu: "20m"
+    memory: "40Mi"
+  limits:
+    cpu: "80m"
+    memory: "70Mi"

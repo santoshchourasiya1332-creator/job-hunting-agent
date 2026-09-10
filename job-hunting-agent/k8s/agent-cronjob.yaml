@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: job-hunting-agent-cron
+  namespace: job-agent
+spec:
+  schedule: "0 */4 * * *" # Runs every 4 hours
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: job-agent
+            image: __IMAGE_PLACEHOLDER__
+            imagePullPolicy: Always
+            env:
+            - name: PLAYWRIGHT_ENDPOINT
+              value: "ws://playwright-service.job-agent.svc.cluster.local:3000"
+            - name: GMAIL_USER_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: agent-secrets
+                  key: GMAIL_USER_EMAIL
+            - name: GMAIL_APP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: agent-secrets
+                  key: GMAIL_APP_PASSWORD
+            - name: GROQ_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: agent-secrets
+                  key: GROQ_API_KEY
+          restartPolicy: OnFailure

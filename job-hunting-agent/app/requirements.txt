@@ -1,0 +1,7 @@
+google-generativeai
+groq
+playwright
+reportlab
+Pillow
+pydantic
+python-dotenv

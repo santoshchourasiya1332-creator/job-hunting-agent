@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: playwright-headless
+  namespace: job-agent
+  labels:
+    app: playwright-headless
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: playwright-headless
+  template:
+    metadata:
+      labels:
+        app: playwright-headless
+    spec:
+      containers:
+      - name: playwright
+        image: mcr.microsoft.com/playwright:v1.40.0-jammy
+        command: ["npx", "-y", "playwright", "run-server", "--port", "3000"]
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "150Mi"
+          limits:
+            cpu: "250m"
+            memory: "300Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: playwright-service
+  namespace: job-agent
+spec:
+  selector:
+    app: playwright-headless
+  ports:
+  - port: 3000
+    targetPort: 3000

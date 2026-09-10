@@ -1,0 +1,24 @@
+adminPassword: "AdminSecurePassword123!"
+
+resources:
+  requests:
+    cpu: "20m"
+    memory: "50Mi"
+  limits:
+    cpu: "100m"
+    memory: "80Mi"
+
+persistence:
+  enabled: false
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+    - name: Loki
+      type: loki
+      url: http://loki-gateway.job-agent.svc.cluster.local:80
+      access: proxy
+      isDefault: true
+      jsonData:
+        maxLines: 1000
