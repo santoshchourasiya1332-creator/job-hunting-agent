@@ -1,15 +1,16 @@
-Autonomous Job-Hunting Agent & Production DevOps Pipeline
-An end-to-end automated DevOps infrastructure and AI-driven agent designed to scan job descriptions, solve authentication barriers via automated OTP tracking, tailor resumes dynamically, and deploy cleanly onto a self-hosted Kubernetes cluster.
+# Autonomous AI Job-Hunting Agent & Production DevOps Pipeline
 
-Architecture & Tech Stack
-Cloud Infrastructure: AWS (Terraform-managed VPC, Subnets, Security Groups, and EC2 instances).
-Container Orchestration: K3s Lightweight Kubernetes with automated node bootstrapping.
-CI/CD Automation: GitLab CI/CD multi-stage pipeline (Terraform validation/apply, Docker multi-stage builds, and dynamic SSH deployment).
-Observability: LGTM Stack (Loki, Grafana, Alloy) for container metrics and log tracking.
-Agent Core: Python, Playwright (headless browser), Groq LLM API, Gmail IMAP (OTP extraction), and ReportLab (PDF tailoring).
-Repository Structure
-terraform/: Infrastructure-as-Code scripts and automated K3s user_data.sh bootstrapping.
-k8s/: Kubernetes manifest files including namespaces, deployment configurations, and cronjobs.
-lgtm/: Observability stack configuration maps for monitoring logs and metrics.
-app/: Core automation logic (LLM matching, OTP reader, resume compiler, and entry orchestrator).
-.gitlab-ci.yml: Complete end-to-end CI/CD automation definition.
+A production-grade, fully automated infrastructure and AI-driven pipeline designed to autonomously track job postings, solve multi-factor authentication barriers via real-time IMAP OTP retrieval, dynamically tailor professional resumes using LLMs, and deploy seamlessly onto a self-hosted Kubernetes cluster.
+
+## Core Capabilities
+* **AI-Powered Analysis & Customization:** Leverages Groq LLMs to analyze target job descriptions and compiles tailored PDF resumes using ReportLab.
+* **Automated Authentication Handling:** Integrates headless browser automation via Playwright alongside secure IMAP mail parsing to handle login challenges and automated OTP verification.
+* **Infrastructure-as-Code (IaC):** Provisions cloud infrastructure dynamically using Terraform for secure VPC subnets and EC2 node management on AWS.
+* **Lightweight Kubernetes Orchestration:** Bootstraps a production-ready K3s cluster via automated node initialization scripts (`user_data.sh`).
+* **Zero-Trust CI/CD Automation:** Orchestrated via GitLab CI/CD with secure runtime secret injection (`kubectl create secret`) preventing any hardcoded credentials.
+* **Comprehensive Observability:** Configured with the LGTM stack (Loki, Grafana, Alloy) for robust container metrics tracking and centralized log aggregation.
+
+## Tech Stack
+* **Cloud & DevOps:** AWS, Terraform, K3s, GitLab CI/CD, Docker
+* **Observability:** Loki, Grafana, Alloy (LGTM Stack)
+* **Application Core:** Python, Playwright, Groq LLM API, Gmail IMAP, ReportLab
