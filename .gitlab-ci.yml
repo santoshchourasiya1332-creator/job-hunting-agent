@@ -34,7 +34,7 @@ tf_validate:
     - echo "public_key_data = \"$PUBLIC_KEY\"" > ${TF_ROOT}/terraform.tfvars
   script:
     - cd ${TF_ROOT}
-    - terraform init -backend-config="address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}" -backend-config="lock_address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}/lock" -backend-config="unlock_address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}/lock" -backend-config="username=${CI_REGISTRY_USER}" -backend-config="password=${CI_JOB_TOKEN}" -backend-config="lock_method=POST" -backend-config="unlock_method=DELETE" -backend-config="retry_wait_min=5"
+    - terraform init -reconfigure -backend-config="address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}" -backend-config="lock_address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}/lock" -backend-config="unlock_address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}/lock" -backend-config="username=${CI_REGISTRY_USER}" -backend-config="password=${CI_JOB_TOKEN}" -backend-config="lock_method=POST" -backend-config="unlock_method=DELETE" -backend-config="retry_wait_min=5"
     - terraform validate
 
 tf_plan:
@@ -47,7 +47,7 @@ tf_plan:
     - echo "public_key_data = \"$PUBLIC_KEY\"" > ${TF_ROOT}/terraform.tfvars
   script:
     - cd ${TF_ROOT}
-    - terraform init -backend-config="address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}" -backend-config="lock_address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}/lock" -backend-config="unlock_address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}/lock" -backend-config="username=${CI_REGISTRY_USER}" -backend-config="password=${CI_JOB_TOKEN}" -backend-config="lock_method=POST" -backend-config="unlock_method=DELETE" -backend-config="retry_wait_min=5"
+    - terraform init -reconfigure -backend-config="address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}" -backend-config="lock_address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}/lock" -backend-config="unlock_address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}/lock" -backend-config="username=${CI_REGISTRY_USER}" -backend-config="password=${CI_JOB_TOKEN}" -backend-config="lock_method=POST" -backend-config="unlock_method=DELETE" -backend-config="retry_wait_min=5"
     - terraform plan -out=tfplan
   artifacts:
     paths:
@@ -61,7 +61,7 @@ tf_apply:
   stage: tf_apply
   script:
     - cd ${TF_ROOT}
-    - terraform init -backend-config="address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}" -backend-config="lock_address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}/lock" -backend-config="unlock_address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}/lock" -backend-config="username=${CI_REGISTRY_USER}" -backend-config="password=${CI_JOB_TOKEN}" -backend-config="lock_method=POST" -backend-config="unlock_method=DELETE" -backend-config="retry_wait_min=5"
+    - terraform init -reconfigure -backend-config="address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}" -backend-config="lock_address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}/lock" -backend-config="unlock_address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}/lock" -backend-config="username=${CI_REGISTRY_USER}" -backend-config="password=${CI_JOB_TOKEN}" -backend-config="lock_method=POST" -backend-config="unlock_method=DELETE" -backend-config="retry_wait_min=5"
     - terraform apply -auto-approve tfplan
     - echo "EC2_PUBLIC_IP=$(terraform output -raw ec2_public_ip)" > ${CI_PROJECT_DIR}/ec2_ip.env
   artifacts:
@@ -93,7 +93,7 @@ deploy:
   stage: deploy
   image: alpine:latest
   before_script:
-    - apk add --no-cache openssh-client curl
+    - apk add --no-cache openssh-client curl helm
     - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
     - chmod +x kubectl && mv kubectl /usr/local/bin/
     - eval $(ssh-agent -s)
@@ -104,13 +104,18 @@ deploy:
     - mkdir -p ~/.kube
     - scp ubuntu@$EC2_PUBLIC_IP:/etc/rancher/k3s/k3s.yaml ~/.kube/config
     - sed -i "s/127.0.0.1/$EC2_PUBLIC_IP/g" ~/.kube/config
+    
+    # Core Manifests & Ingress
     - kubectl apply -f k8s/namespace.yaml
+    - kubectl apply -f k8s/ingress.yaml
+    
     - kubectl create secret generic agent-secrets \
         --namespace=job-agent \
         --from-literal=GMAIL_USER_EMAIL="$GMAIL_USER_EMAIL" \
         --from-literal=GMAIL_APP_PASSWORD="$GMAIL_APP_PASSWORD" \
         --from-literal=GROQ_API_KEY="$GROQ_API_KEY" \
         --dry-run=client -o yaml | kubectl apply -f -
+        
     - kubectl apply -f k8s/playwright-deployment.yaml
     - sed -i "s|__IMAGE_PLACEHOLDER__|${IMAGE_TAG}|g" k8s/agent-cronjob.yaml
     - kubectl apply -f k8s/agent-cronjob.yaml
