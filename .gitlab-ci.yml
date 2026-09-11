@@ -10,6 +10,8 @@ variables:
   TF_STATE_NAME: "k8s-aws-production"
   IMAGE_TAG: "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}"
   IMAGE_LATEST: "${CI_REGISTRY_IMAGE}:latest"
+  TF_HTTP_USERNAME: "gitlab-ci-token"
+  TF_HTTP_PASSWORD: "${CI_JOB_TOKEN}"
 
 default:
   image:
@@ -34,7 +36,7 @@ tf_validate:
     - echo "public_key_data = \"$PUBLIC_KEY\"" > ${TF_ROOT}/terraform.tfvars
   script:
     - cd ${TF_ROOT}
-    - terraform init -reconfigure -backend-config="address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}" -backend-config="username=gitlab-ci-token" -backend-config="password=${CI_JOB_TOKEN}"
+    - terraform init -reconfigure -backend-config="address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}"
     - terraform validate
 
 tf_plan:
@@ -47,7 +49,7 @@ tf_plan:
     - echo "public_key_data = \"$PUBLIC_KEY\"" > ${TF_ROOT}/terraform.tfvars
   script:
     - cd ${TF_ROOT}
-    - terraform init -reconfigure -backend-config="address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}" -backend-config="username=gitlab-ci-token" -backend-config="password=${CI_JOB_TOKEN}"
+    - terraform init -reconfigure -backend-config="address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}"
     - terraform plan -out=tfplan
   artifacts:
     paths:
@@ -61,7 +63,7 @@ tf_apply:
   stage: tf_apply
   script:
     - cd ${TF_ROOT}
-    - terraform init -reconfigure -backend-config="address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}" -backend-config="username=gitlab-ci-token" -backend-config="password=${CI_JOB_TOKEN}"
+    - terraform init -reconfigure -backend-config="address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}"
     - terraform apply -auto-approve tfplan
     - echo "EC2_PUBLIC_IP=$(terraform output -raw ec2_public_ip)" > ${CI_PROJECT_DIR}/ec2_ip.env
   artifacts:
