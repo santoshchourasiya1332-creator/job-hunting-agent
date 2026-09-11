@@ -6,7 +6,7 @@ A fully automated, zero-cost, event-driven pipeline and infrastructure framework
 
 ## **Architecture Overview & Workflow**
 
-![Autonomous Agent Workflow](.\C:\Users\THIS\Downloads\Run-agent-cluster-root.png)
+![Autonomous Agent Workflow](./images/Run-agent-cluster-root.png)
 
 ---
 
