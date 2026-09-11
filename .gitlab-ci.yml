@@ -13,7 +13,7 @@ variables:
 
 default:
   image:
-    name: hashicorp/terraform:light
+    name: hashicorp/terraform:1.5.7
     entrypoint: [""]
 
 cache:
