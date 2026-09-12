@@ -67,6 +67,8 @@ tf_apply:
     - terraform apply -auto-approve tfplan
     - echo "EC2_PUBLIC_IP=$(terraform output -raw ec2_public_ip)" > ${CI_PROJECT_DIR}/ec2_ip.env
   artifacts:
+    paths:
+      - ${CI_PROJECT_DIR}/ec2_ip.env
     reports:
       dotenv: ${CI_PROJECT_DIR}/ec2_ip.env
   only:
@@ -104,12 +106,17 @@ deploy:
     - ssh-keyscan -H $EC2_PUBLIC_IP >> ~/.ssh/known_hosts
   script:
     - mkdir -p ~/.kube
+    
+    # FIX: K3s ko fully boot hone ke liye thoda time dena zaroori hai taaki i/o timeout na aaye
+    - echo "Waiting for K3s service to initialize on EC2..."
+    - sleep 20
+    
     - scp ubuntu@$EC2_PUBLIC_IP:/etc/rancher/k3s/k3s.yaml ~/.kube/config
     - sed -i "s/127.0.0.1/$EC2_PUBLIC_IP/g" ~/.kube/config
     
-    # Core Manifests & Ingress
-    - kubectl apply -f k8s/namespace.yaml
-    - kubectl apply -f k8s/ingress.yaml
+    # Core Manifests & Ingress (Added --validate=false to bypass openapi timeout)
+    - kubectl apply --validate=false -f k8s/namespace.yaml
+    - kubectl apply --validate=false -f k8s/ingress.yaml
     
     - kubectl create secret generic agent-secrets \
         --namespace=job-agent \
@@ -118,8 +125,8 @@ deploy:
         --from-literal=GROQ_API_KEY="$GROQ_API_KEY" \
         --dry-run=client -o yaml | kubectl apply -f -
         
-    - kubectl apply -f k8s/playwright-deployment.yaml
+    - kubectl apply --validate=false -f k8s/playwright-deployment.yaml
     - sed -i "s|__IMAGE_PLACEHOLDER__|${IMAGE_TAG}|g" k8s/agent-cronjob.yaml
-    - kubectl apply -f k8s/agent-cronjob.yaml
+    - kubectl apply --validate=false -f k8s/agent-cronjob.yaml
   only:
     - main
