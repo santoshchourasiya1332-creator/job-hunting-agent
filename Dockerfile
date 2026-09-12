@@ -1,46 +1,53 @@
-FROM mcr.microsoft.com/playwright/python:v1.40.0-jammy
+# Use official Python lightweight image
+FROM python:3.10-slim
 
+# Set working directory inside container
 WORKDIR /app
 
-# System dependencies update and install required browser/PDF libraries
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
-    libnss3 \
+# Install system dependencies required for Playwright and headless browsers
+RUN apt-get update && apt-get install -y \
     libnspr4 \
+    libnss3 \
     libatk1.0-0 \
     libatk-bridge2.0-0 \
     libcups2 \
     libdrm2 \
     libdbus-1-3 \
     libgobject-2.0-0 \
-    libexpat1 \
-    libfontconfig1 \
-    libfreetype6 \
-    libxi6 \
+    libavcodec60 \
+    libavformat60 \
+    libavutil58 \
     libx11-6 \
+    libx11-xcb1 \
+    libxcb1 \
     libxcomposite1 \
     libxcursor1 \
     libxdamage1 \
     libxext6 \
     libxfixes3 \
+    libxi6 \
     libxrandr2 \
     libxrender1 \
     libxss1 \
     libxtst6 \
-    ca-certificates \
     fonts-liberation \
     libappindicator3-1 \
-    libasound2 \
-    libpango-1.0-0 \
-    libcairo2 \
+    libasound2t64 \
+    libgbm1 \
+    xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
-# Install python dependencies from app folder (ensure playwright==1.40.0 in requirements.txt)
-COPY app/requirements.txt ./requirements.txt
+# Copy requirements file first for efficient caching
+COPY requirements.txt .
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy full code structure
-COPY app/ .
+# Install Playwright browsers
+RUN playwright install
 
+# Copy the rest of the application code
+COPY . .
+
+# Command to run your agent application
 CMD ["python", "main.py"]
