@@ -71,6 +71,9 @@ tf_apply:
       - ${CI_PROJECT_DIR}/ec2_ip.env
     reports:
       dotenv: ${CI_PROJECT_DIR}/ec2_ip.env
+  rules:
+    - changes:
+        - terraform/**/*
   only:
     - main
 
@@ -107,10 +110,9 @@ deploy:
   script:
     - mkdir -p ~/.kube
     
-    # K3s initialization & health-check loop to avoid port 6443 i/o timeouts
+    # K3s initialization & health-check loop (Fixed with ssh sudo cat instead of scp)
     - echo "Waiting for K3s service to initialize on EC2..."
-    - scp ubuntu@$EC2_PUBLIC_IP:/etc/rancher/k3s/k3s.yaml ~/.kube/config
-    - sed -i "s/127.0.0.1/$EC2_PUBLIC_IP/g" ~/.kube/config
+    - ssh ubuntu@$EC2_PUBLIC_IP "sudo cat /etc/rancher/k3s/k3s.yaml" | sed "s/127.0.0.1/$EC2_PUBLIC_IP/g" > ~/.kube/config
     
     - echo "Waiting for Kubernetes API server to accept connections..."
     - |
