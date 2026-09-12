@@ -11,7 +11,7 @@ spec:
       template:
         spec:
           imagePullSecrets:
-            - name: registry.gitlab.com/ai_job_hunt-group/ai_job_hunt-project:f5f95ce3  # <-- Yeh line add karni hai
+            - name: gitlab-registry-secret
           containers:
           - name: job-agent
             image: __IMAGE_PLACEHOLDER__
