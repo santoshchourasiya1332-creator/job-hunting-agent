@@ -23,7 +23,7 @@ def analyze_job_description(jd_text: str, candidate_skills: list) -> dict:
     try:
         response = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="llama3-8b-8192",
+            model="llama-3.1-8b-instant",
             temperature=0.1
         )
         result_text = response.choices[0].message.content
