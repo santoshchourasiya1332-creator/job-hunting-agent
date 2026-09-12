@@ -72,10 +72,9 @@ tf_apply:
     reports:
       dotenv: ${CI_PROJECT_DIR}/ec2_ip.env
   rules:
-    - changes:
-        - terraform/**/*
-  only:
-    - main
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - terraform/**/* 
 
 # -------------------------------------------------------------------
 # 3. DOCKER IMAGE BUILD & PUSH TO GITLAB REGISTRY
