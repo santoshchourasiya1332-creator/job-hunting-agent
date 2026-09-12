@@ -36,12 +36,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcairo2 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install python dependencies from app folder
+# Install python dependencies from app folder (ensure playwright==1.40.0 in requirements.txt)
 COPY app/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Install Playwright browser binaries inside container
-RUN playwright install chromium
 
 # Copy full code structure
 COPY app/ .
