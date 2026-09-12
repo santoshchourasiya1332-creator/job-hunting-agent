@@ -10,6 +10,8 @@ spec:
     spec:
       template:
         spec:
+          imagePullSecrets:
+            - name: gitlab-registry-secret  # <-- Yeh line add karni hai
           containers:
           - name: job-agent
             image: __IMAGE_PLACEHOLDER__
