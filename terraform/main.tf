@@ -64,11 +64,11 @@ resource "aws_route_table_association" "job_agent_rta" {
 # Security Group
 resource "aws_security_group" "job_agent_sg" {
   name        = "job-agent-sg"
-  description = "Allow inbound SSH, HTTP, and HTTPS traffic"
+  description = "Allow inbound SSH, HTTP, HTTPS, K3s API, and NodePort traffic"
   vpc_id      = aws_vpc.job_agent_vpc.id
 
   ingress {
-    description = "SSH Access"
+    description = "SSH administrative entry"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
@@ -76,7 +76,7 @@ resource "aws_security_group" "job_agent_sg" {
   }
 
   ingress {
-    description = "HTTP Traffic"
+    description = "HTTP web ingress"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -84,14 +84,31 @@ resource "aws_security_group" "job_agent_sg" {
   }
 
   ingress {
-    description = "HTTPS Traffic"
+    description = "HTTPS web ingress"
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    description = "K3s Remote API control"
+    from_port   = 6443
+    to_port     = 6443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "NodePort service access"
+    from_port   = 30000
+    to_port     = 32767
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
+    description = "Unrestricted outbound traffic"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
