@@ -4,14 +4,14 @@ metadata:
   name: job-hunting-agent-cron
   namespace: job-agent
 spec:
-  schedule: "0 */4 * * *" # Runs every 4 hours
+  schedule: "0 */2 * * *" # Runs every 2 hours
   concurrencyPolicy: Forbid
   jobTemplate:
     spec:
       template:
         spec:
           imagePullSecrets:
-            - name: gitlab-registry-secret  # <-- Yeh line add karni hai
+            - name: registry.gitlab.com/ai_job_hunt-group/ai_job_hunt-project:f5f95ce3  # <-- Yeh line add karni hai
           containers:
           - name: job-agent
             image: __IMAGE_PLACEHOLDER__
