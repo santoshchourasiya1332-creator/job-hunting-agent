@@ -65,7 +65,7 @@ tf_apply:
     - cd ${TF_ROOT}
     - terraform init -reconfigure -backend-config="address=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${TF_STATE_NAME}"
     - terraform apply -auto-approve tfplan
-    - echo "EC2_PUBLIC_IP=$(terraform output -raw ec2_public_ip)" > ${CI_PROJECT_DIR}/ec2_ip.env
+    - echo "EC2_PUBLIC_IP=$(terraform output -raw public_ip)" > ${CI_PROJECT_DIR}/ec2_ip.env
   artifacts:
     paths:
       - ${CI_PROJECT_DIR}/ec2_ip.env
@@ -107,14 +107,18 @@ deploy:
   script:
     - mkdir -p ~/.kube
     
-    # FIX: K3s ko fully boot hone ke liye thoda time dena zaroori hai taaki i/o timeout na aaye
+    # K3s initialization & health-check loop to avoid port 6443 i/o timeouts
     - echo "Waiting for K3s service to initialize on EC2..."
-    - sleep 20
-    
     - scp ubuntu@$EC2_PUBLIC_IP:/etc/rancher/k3s/k3s.yaml ~/.kube/config
     - sed -i "s/127.0.0.1/$EC2_PUBLIC_IP/g" ~/.kube/config
     
-    # Core Manifests & Ingress (Added --validate=false to bypass openapi timeout)
+    - echo "Waiting for Kubernetes API server to accept connections..."
+    - |
+      until kubectl get nodes; do
+        echo "API server not ready yet, retrying in 5 seconds..."
+        sleep 5
+      done
+
     - kubectl apply --validate=false -f k8s/namespace.yaml
     - kubectl apply --validate=false -f k8s/ingress.yaml
     
