@@ -71,15 +71,26 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             context.storage_state(path=COOKIE_FILE)
             logging.info("LinkedIn session cookies saved successfully.")
 
-            # Search target jobs with Easy Apply filter
-            search_query = job_title.replace(" ", "%20")
-            search_url = f"https://www.linkedin.com/jobs/search/?keywords={search_query}&location=Pune%2C%20Maharashtra%2C%20India&f_LF=f_AL"
-            
-            # Added: Human-like pause before navigating to job search to prevent bot detection/browser closure
+            # \033[91m# Added: Bypass direct URL bot-detection by using LinkedIn Jobs Home UI navigation\033[0m
             time.sleep(3)
-            logging.info(f"Navigating to job search URL: {search_url}")
-            # Modified: Increased timeout to 60000ms and changed wait_until to domcontentloaded to prevent timeout errors
-            page.goto(search_url, timeout=60000, wait_until="domcontentloaded")
+            logging.info("Navigating to LinkedIn Jobs home page...")
+            page.goto("https://www.linkedin.com/jobs/", timeout=60000, wait_until="domcontentloaded")
+            time.sleep(3)
+            
+            # \033[91m# Added: Fill search input using UI interaction rather than direct URL parameters\033[0m
+            logging.info(f"Typing search query for role: {job_title}")
+            search_box = page.locator("input.jobs-search-box__keyboard-text-input").first
+            if search_box.is_visible(timeout=5000):
+                search_box.fill(job_title)
+                page.keyboard.press("Enter")
+                time.sleep(4)
+            else:
+                # Fallback input selector for global header search
+                global_search = page.locator("input.search-global-typeahead__input").first
+                global_search.fill(job_title)
+                page.keyboard.press("Enter")
+                time.sleep(4)
+
             page.wait_for_selector(".jobs-search-results-list", timeout=15000)
 
             job_cards = page.locator(".job-card-container--clickable").all()
