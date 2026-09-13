@@ -75,6 +75,8 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             search_query = job_title.replace(" ", "%20")
             search_url = f"https://www.linkedin.com/jobs/search/?keywords={search_query}&location=Pune%2C%20Maharashtra%2C%20India&f_LF=f_AL"
             
+            # Added: Human-like pause before navigating to job search to prevent bot detection/browser closure
+            time.sleep(3)
             logging.info(f"Navigating to job search URL: {search_url}")
             # Modified: Increased timeout to 60000ms and changed wait_until to domcontentloaded to prevent timeout errors
             page.goto(search_url, timeout=60000, wait_until="domcontentloaded")
