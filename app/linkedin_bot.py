@@ -22,7 +22,7 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             browser = p.chromium.connect(PLAYWRIGHT_ENDPOINT)
             context = browser.new_context()
         else:
-            browser = p.chromium.launch(headless=True, args=["--disable-blink-features=AutomationControlled"])
+            browser = p.chromium.launch(headless=False, slow_mo=100, args=["--disable-blink-features=AutomationControlled"])
             context = browser.new_context(
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
             )
@@ -32,9 +32,14 @@ def apply_on_linkedin(job_title: str, resume_path: str):
         try:
             logging.info("Navigating to LinkedIn login...")
             page.goto("https://www.linkedin.com/login", timeout=60000)
-            page.fill("#username", LINKEDIN_EMAIL)
-            page.fill("#password", LINKEDIN_PASSWORD)
-            page.click("button[type='submit']")
+            
+            try:
+                page.fill("#username", LINKEDIN_EMAIL, timeout=10000)
+                page.fill("#password", LINKEDIN_PASSWORD)
+                page.click("button[type='submit']")
+            except Exception:
+                logging.warning("Automated login blocked or selectors changed. Please complete login manually if browser is visible...")
+                page.wait_for_url("**/feed/**", timeout=60000)
             
             # Wait for successful feed load or security redirect
             page.wait_for_url("**/feed/**", timeout=20000)
