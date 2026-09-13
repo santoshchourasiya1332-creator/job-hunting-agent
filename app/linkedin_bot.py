@@ -1,7 +1,7 @@
 import os
 import time
 import logging
-from playwright.sync_api import sync_api
+from playwright.sync_api import sync_playwright
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
@@ -16,7 +16,7 @@ def apply_on_linkedin(job_title: str, resume_path: str):
         logging.error("LINKEDIN_PASSWORD environment variable is missing. Skipping LinkedIn application.")
         return
 
-    with sync_api() as p:
+    with sync_playwright() as p:
         if PLAYWRIGHT_ENDPOINT:
             logging.info(f"Connecting to remote Playwright browser at {PLAYWRIGHT_ENDPOINT}")
             browser = p.chromium.connect(PLAYWRIGHT_ENDPOINT)
@@ -36,9 +36,15 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             page.fill("#password", LINKEDIN_PASSWORD)
             page.click("button[type='submit']")
             
-            # Wait for successful feed load or security redirect
-            page.wait_for_url("**/feed/**", timeout=20000)
-            logging.info("Successfully logged into LinkedIn.")
+            # Wait for successful feed load or check for verification/security prompt
+            try:
+                page.wait_for_url("**/feed/**", timeout=20000)
+                logging.info("Successfully logged into LinkedIn.")
+            except Exception:
+                logging.warning("Feed URL not reached immediately. Checking for checkpoint or manual intervention requirement...")
+                if "checkpoint" in page.url:
+                    logging.error("LinkedIn security checkpoint/OTP detected. Manual verification may be required.")
+                    return
 
             # Search target jobs with Easy Apply filter
             search_query = job_title.replace(" ", "%20")
