@@ -36,15 +36,9 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             page.fill("#password", LINKEDIN_PASSWORD)
             page.click("button[type='submit']")
             
-            # Wait for successful feed load or check for verification/security prompt
-            try:
-                page.wait_for_url("**/feed/**", timeout=20000)
-                logging.info("Successfully logged into LinkedIn.")
-            except Exception:
-                logging.warning("Feed URL not reached immediately. Checking for checkpoint or manual intervention requirement...")
-                if "checkpoint" in page.url:
-                    logging.error("LinkedIn security checkpoint/OTP detected. Manual verification may be required.")
-                    return
+            # Wait for successful feed load or security redirect
+            page.wait_for_url("**/feed/**", timeout=20000)
+            logging.info("Successfully logged into LinkedIn.")
 
             # Search target jobs with Easy Apply filter
             search_query = job_title.replace(" ", "%20")
