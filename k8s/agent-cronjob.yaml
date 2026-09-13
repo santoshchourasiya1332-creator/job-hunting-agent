@@ -44,4 +44,9 @@ spec:
                 secretKeyRef:
                   name: agent-secrets
                   key: LINKEDIN_PASSWORD
+            - name: LINKEDIN_COOKIES  # Added: Pass persistent LinkedIn session cookies from Kubernetes Secret
+              valueFrom:
+                secretKeyRef:
+                  name: agent-secrets
+                  key: LINKEDIN_COOKIES
           restartPolicy: OnFailure
