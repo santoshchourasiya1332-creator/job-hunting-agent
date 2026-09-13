@@ -1,6 +1,6 @@
 google-generativeai
 groq
-playwright==1.40.0
+greenlet
 reportlab
 pydantic
 python-dotenv
