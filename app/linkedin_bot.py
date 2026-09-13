@@ -1,6 +1,7 @@
 import os
 import time
 import logging
+import base64  # Added: Required for decoding Base64 encoded session cookies
 from playwright.sync_api import sync_playwright
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -9,8 +10,15 @@ LINKEDIN_EMAIL = os.getenv("LINKEDIN_EMAIL", "santoshchourasiya2011@gmail.com")
 LINKEDIN_PASSWORD = os.getenv("LINKEDIN_PASSWORD")
 PLAYWRIGHT_ENDPOINT = os.getenv("PLAYWRIGHT_ENDPOINT")
 
-# Added: Path to store session cookies for persistence and bypassing bot detection checks
+# Path to store session cookies for persistence and bypassing bot detection checks
 COOKIE_FILE = "/tmp/linkedin_state.json"
+
+# Added: Restore session cookies from Kubernetes Secret environment variable upon startup
+encoded_cookies = os.getenv("LINKEDIN_COOKIES")
+if encoded_cookies and not os.path.exists(COOKIE_FILE):
+    with open(COOKIE_FILE, "wb") as f:
+        f.write(base64.b64decode(encoded_cookies))
+    logging.info("Restored LinkedIn session cookies from Kubernetes Secret.")
 
 def apply_on_linkedin(job_title: str, resume_path: str):
     logging.info(f"Starting LinkedIn automation for: {job_title}")

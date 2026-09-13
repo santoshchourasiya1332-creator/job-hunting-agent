@@ -123,8 +123,8 @@ deploy:
     - kubectl apply --validate=false -f k8s/namespace.yaml
     - kubectl apply --validate=false -f k8s/ingress.yaml
     
-    # Updated Secret including LinkedIn credentials
-    - kubectl create secret generic agent-secrets --namespace=job-agent --from-literal=GMAIL_USER_EMAIL="$GMAIL_USER_EMAIL" --from-literal=GMAIL_APP_PASSWORD="$GMAIL_APP_PASSWORD" --from-literal=GROQ_API_KEY="$GROQ_API_KEY" --from-literal=LINKEDIN_EMAIL="$LINKEDIN_EMAIL" --from-literal=LINKEDIN_PASSWORD="$LINKEDIN_PASSWORD" --dry-run=client -o yaml | kubectl apply -f -
+    # Updated Secret including LinkedIn session cookies and credentials
+    - kubectl create secret generic agent-secrets --namespace=job-agent --from-literal=GMAIL_USER_EMAIL="$GMAIL_USER_EMAIL" --from-literal=GMAIL_APP_PASSWORD="$GMAIL_APP_PASSWORD" --from-literal=GROQ_API_KEY="$GROQ_API_KEY" --from-literal=LINKEDIN_EMAIL="$LINKEDIN_EMAIL" --from-literal=LINKEDIN_PASSWORD="$LINKEDIN_PASSWORD" --from-literal=LINKEDIN_COOKIES="$LINKEDIN_COOKIES" --dry-run=client -o yaml | kubectl apply -f -
         
     - kubectl apply --validate=false -f k8s/playwright-deployment.yaml
     - sed -i "s|__IMAGE_PLACEHOLDER__|${IMAGE_TAG}|g" k8s/agent-cronjob.yaml
