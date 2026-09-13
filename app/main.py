@@ -4,6 +4,7 @@ import logging
 from jd_analyzer import analyze_job_description
 from otp_reader import fetch_latest_otp
 from resume_tailor import generate_tailored_pdf
+from linkedin_bot import apply_on_linkedin
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
@@ -42,6 +43,12 @@ def execute_job_hunting_workflow(job_title: str, job_description_text: str):
 
     logging.info(f"Tailored resume saved at: {output_pdf_path}")
     logging.info("Proceeding to automated application workflow...")
+    
+    # Trigger LinkedIn Easy Apply Bot
+    try:
+        apply_on_linkedin(job_title, output_pdf_path)
+    except Exception as e:
+        logging.error(f"Failed to execute LinkedIn automation: {e}")
 
 if __name__ == "__main__":
     sample_jd = """

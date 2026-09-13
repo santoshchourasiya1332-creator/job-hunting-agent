@@ -34,4 +34,14 @@ spec:
                 secretKeyRef:
                   name: agent-secrets
                   key: GROQ_API_KEY
+            - name: LINKEDIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: agent-secrets
+                  key: LINKEDIN_EMAIL
+            - name: LINKEDIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: agent-secrets
+                  key: LINKEDIN_PASSWORD
           restartPolicy: OnFailure
