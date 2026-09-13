@@ -23,7 +23,7 @@ def analyze_job_description(jd_text: str, candidate_skills: list) -> dict:
     try:
         response = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-20b",
             temperature=0.1
         )
         result_text = response.choices[0].message.content
