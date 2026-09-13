@@ -76,7 +76,8 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             search_url = f"https://www.linkedin.com/jobs/search/?keywords={search_query}&location=Pune%2C%20Maharashtra%2C%20India&f_LF=f_AL"
             
             logging.info(f"Navigating to job search URL: {search_url}")
-            page.goto(search_url, timeout=30000)
+            # Modified: Increased timeout to 60000ms and changed wait_until to domcontentloaded to prevent timeout errors
+            page.goto(search_url, timeout=60000, wait_until="domcontentloaded")
             page.wait_for_selector(".jobs-search-results-list", timeout=15000)
 
             job_cards = page.locator(".job-card-container--clickable").all()
