@@ -4,7 +4,7 @@ metadata:
   name: job-hunting-agent-cron
   namespace: job-agent
 spec:
-  schedule: "0 */2 * * *"
+  schedule: "0 */2 * * *" # Runs every 2 hours
   concurrencyPolicy: Forbid
   jobTemplate:
     spec:

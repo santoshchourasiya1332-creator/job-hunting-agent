@@ -22,7 +22,7 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             browser = p.chromium.connect(PLAYWRIGHT_ENDPOINT)
             context = browser.new_context()
         else:
-            browser = p.chromium.launch(headless=False, slow_mo=100, args=["--disable-blink-features=AutomationControlled"])
+            browser = p.chromium.launch(headless=True, args=["--disable-blink-features=AutomationControlled", "--no-sandbox", "--disable-setuid-sandbox", "--disable-infobars"])
             context = browser.new_context(
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
             )
