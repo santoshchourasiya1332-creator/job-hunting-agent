@@ -18,6 +18,7 @@ spec:
       containers:
       - name: playwright
         image: mcr.microsoft.com/playwright:v1.62.0-jammy
+        imagePullPolicy: Always
         command:
         - npx
         - -y

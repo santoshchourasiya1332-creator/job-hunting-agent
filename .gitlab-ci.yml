@@ -86,7 +86,7 @@ build:
     - docker:24.0.5-dind
   script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker build -t $IMAGE_TAG -t $IMAGE_LATEST .
+    - docker build --no-cache -t $IMAGE_TAG -t $IMAGE_LATEST .
     - docker push $IMAGE_TAG
     - docker push $IMAGE_LATEST
   only:
@@ -129,5 +129,6 @@ deploy:
     - kubectl apply --validate=false -f k8s/playwright-deployment.yaml
     - sed -i "s|__IMAGE_PLACEHOLDER__|${IMAGE_TAG}|g" k8s/agent-cronjob.yaml
     - kubectl apply --validate=false -f k8s/agent-cronjob.yaml
+    - kubectl rollout restart deployment playwright-headless -n job-agent
   only:
     - main
