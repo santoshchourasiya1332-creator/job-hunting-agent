@@ -22,7 +22,7 @@ spec:
         command:
         - npx
         - -y
-        - playwright
+        - playwright@1.49.0
         - run-server
         - --port
         - "3000"
