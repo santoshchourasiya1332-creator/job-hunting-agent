@@ -9,6 +9,9 @@ LINKEDIN_EMAIL = os.getenv("LINKEDIN_EMAIL", "santoshchourasiya2011@gmail.com")
 LINKEDIN_PASSWORD = os.getenv("LINKEDIN_PASSWORD")
 PLAYWRIGHT_ENDPOINT = os.getenv("PLAYWRIGHT_ENDPOINT")
 
+# Added: Path to store session cookies for persistence and bypassing bot detection checks
+COOKIE_FILE = "/tmp/linkedin_state.json"
+
 def apply_on_linkedin(job_title: str, resume_path: str):
     logging.info(f"Starting LinkedIn automation for: {job_title}")
     
@@ -17,33 +20,48 @@ def apply_on_linkedin(job_title: str, resume_path: str):
         return
 
     with sync_playwright() as p:
+        # Added: Check if previous session cookies exist to reuse them
+        context_args = {}
+        if os.path.exists(COOKIE_FILE):
+            context_args["storage_state"] = COOKIE_FILE
+            logging.info("Found existing session cookies. Loading state to bypass login.")
+
         if PLAYWRIGHT_ENDPOINT:
             logging.info(f"Connecting to remote Playwright browser at {PLAYWRIGHT_ENDPOINT}")
             browser = p.chromium.connect(PLAYWRIGHT_ENDPOINT)
-            context = browser.new_context()
+            context = browser.new_context(**context_args) # Added: Pass saved context state if available
         else:
             browser = p.chromium.launch(headless=True, args=["--disable-blink-features=AutomationControlled", "--no-sandbox", "--disable-setuid-sandbox", "--disable-infobars"])
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-            )
+            context_args["user_agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+            context = browser.new_context(**context_args) # Added: Pass saved context state if available
 
         page = context.new_page()
 
         try:
-            logging.info("Navigating to LinkedIn login...")
-            page.goto("https://www.linkedin.com/login", timeout=60000)
-            
-            try:
-                page.fill("#username", LINKEDIN_EMAIL, timeout=10000)
-                page.fill("#password", LINKEDIN_PASSWORD)
-                page.click("button[type='submit']")
-            except Exception:
-                logging.warning("Automated login blocked or selectors changed. Please complete login manually if browser is visible...")
-                page.wait_for_url("**/feed/**", timeout=60000)
+            # Modified: Try loading feed directly first to utilize saved session cookies
+            logging.info("Navigating to LinkedIn feed...")
+            page.goto("https://www.linkedin.com/feed/", timeout=60000)
+
+            # Added: If redirected to login/auth page, cookies are invalid/missing, fallback to credentials
+            if "login" in page.url or "uas" in page.url or "checkpoint" in page.url:
+                logging.info("Session expired or missing. Navigating to login page...")
+                page.goto("https://www.linkedin.com/login", timeout=60000)
+                
+                try:
+                    page.fill("#username", LINKEDIN_EMAIL, timeout=10000)
+                    page.fill("#password", LINKEDIN_PASSWORD)
+                    page.click("button[type='submit']")
+                except Exception:
+                    logging.warning("Automated login blocked or selectors changed. Please complete login manually if browser is visible...")
+                    page.wait_for_url("**/feed/**", timeout=60000)
             
             # Wait for successful feed load or security redirect
             page.wait_for_url("**/feed/**", timeout=20000)
             logging.info("Successfully logged into LinkedIn.")
+
+            # Added: Save current session state/cookies for future CronJob runs
+            context.storage_state(path=COOKIE_FILE)
+            logging.info("LinkedIn session cookies saved successfully.")
 
             # Search target jobs with Easy Apply filter
             search_query = job_title.replace(" ", "%20")
