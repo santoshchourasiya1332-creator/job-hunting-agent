@@ -93,59 +93,30 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             context.storage_state(path=COOKIE_FILE)
             logging.info("LinkedIn session cookies saved successfully.")
 
-            # --- HUMAN-LIKE NAVIGATION INSTEAD OF DIRECT SEARCH URL ---
-            logging.info("Navigating through UI to jobs section...")
-
-            # Click on the Jobs icon/tab on LinkedIn feed if it's there, or navigate safely.
-            # NOTE: is_visible() does NOT auto-wait, so give the nav bar a real chance to
-            # hydrate before deciding it isn't there.
-            navigated_via_nav_click = False
+            # --- ROBUST UI NAVIGATION TO JOBS SECTION ---
+            logging.info("Navigating to jobs section via UI interaction...")
+            
             try:
-                jobs_nav = page.locator("a[href*='/jobs/']").first
-                jobs_nav.wait_for(state="visible", timeout=8000)
-                jobs_nav.click()
-                navigated_via_nav_click = True
-                time.sleep(3)
-            except Exception:
-                logging.info("Jobs nav link not found/clickable in time, falling back to direct URL.")
-
-            if not navigated_via_nav_click:
-                try:
-                    # domcontentloaded instead of the default "load" — LinkedIn's SPA pages
-                    # keep background requests running and the "load" event may never fire,
-                    # which is what was causing the 60s timeouts.
-                    page.goto("https://www.linkedin.com/jobs/", wait_until="domcontentloaded", timeout=45000)
-                except Exception as goto_err:
-                    dump_debug_state(page, "jobs_goto_failed")
-                    raise goto_err
-
-            # If LinkedIn served a checkpoint/verification/auth-wall page instead of Jobs,
-            # bot-detection was triggered — stop cleanly instead of hanging on selectors
-            # that will never appear.
-            if is_challenge_url(page.url):
-                dump_debug_state(page, "jobs_challenge")
-                logging.error(
-                    f"LinkedIn served a challenge/checkpoint page instead of Jobs (url={page.url}). "
-                    "This is bot-detection, not a selector bug — see the debug screenshot."
-                )
-                return
-
-            # Give the jobs page's own content a real target to wait for, rather than a
-            # fixed sleep + the generic "load" event.
-            try:
-                page.wait_for_selector(
-                    "input.jobs-search-box__text-input, input[aria-label*='Search'], .jobs-search-results-list",
-                    timeout=20000,
-                )
-            except Exception:
-                dump_debug_state(page, "jobs_page_not_ready")
-                logging.warning("Jobs page loaded but expected search elements never appeared.")
-
+                # Try clicking the global navigation Jobs icon/link directly from the feed
+                jobs_tab = page.locator("a.global-nav__secondary-link[href*='/jobs/'], a[href*='/jobs/']").first
+                if jobs_tab.is_visible(timeout=5000):
+                    jobs_tab.click()
+                    logging.info("Clicked on Jobs tab successfully.")
+                else:
+                    # Fallback: Use pushState/JS navigation or direct goto with 'commit' state
+                    page.evaluate("window.location.href = 'https://www.linkedin.com/jobs/'")
+                
+                # Wait for the jobs search input or main container to appear
+                page.wait_for_selector("input.jobs-search-box__text-input, input[aria-label*='Search']", timeout=30000)
+            except Exception as nav_err:
+                logging.warning(f"UI navigation fallback triggered due to: {nav_err}")
+                page.goto("https://www.linkedin.com/jobs/search/", timeout=45000, wait_until="commit")
+                time.sleep(5)
+            
             # Type keywords into the job search box naturally
             search_keyword = job_title.replace("_", " ")
             logging.info(f"Typing search keyword: {search_keyword}")
             
-            # Wait for search input field and type slowly like a human
             search_input = page.locator("input.jobs-search-box__text-input, input[aria-label*='Search']").first
             search_input.click()
             time.sleep(1)
@@ -155,14 +126,13 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             
             # Allow results to load
             time.sleep(8)
-            # ---------------------------------------------------------
+            # ---------------------------------------------
 
             # Ensure page is stable before locating elements using multiple fallback selectors
             try:
                 page.wait_for_selector(".jobs-search-results-list, .scaffold-layout__list, main", timeout=30000)
             except Exception as sel_err:
                 logging.warning("Standard search list selector not found, checking page content...")
-                # Safe screenshot capture wrapped in try-except to avoid crash if context closes
                 try:
                     page.screenshot(path="/tmp/linkedin_debug.png", full_page=True)
                     logging.info("Saved debug screenshot to /tmp/linkedin_debug.png")
@@ -198,7 +168,6 @@ def apply_on_linkedin(job_title: str, resume_path: str):
                             logging.info("Application submitted successfully!")
                             time.sleep(3)
                         else:
-                            # Close or dismiss if multi-step requires complex manual input
                             dismiss_btn = page.locator("button[aria-label='Dismiss']")
                             if dismiss_btn.is_visible():
                                 dismiss_btn.click()
@@ -215,10 +184,6 @@ def apply_on_linkedin(job_title: str, resume_path: str):
         except Exception as e:
             logging.error(f"Error during LinkedIn automation workflow: {e}")
         finally:
-            # When connected via chromium.connect() (our shared playwright-service pod),
-            # calling browser.close() tears down that whole remote browser instance —
-            # closing just the context is enough and keeps the shared server healthy
-            # for the next cronjob run.
             try:
                 context.close()
             except Exception:
