@@ -83,8 +83,15 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             # Allow extra time for Cloudflare/LinkedIn JS challenge to pass smoothly
             time.sleep(10)
             
-            # Ensure page is stable before locating elements
-            page.wait_for_selector(".jobs-search-results-list", timeout=30000)
+            # Ensure page is stable before locating elements using multiple fallback selectors
+            try:
+                page.wait_for_selector(".jobs-search-results-list, .scaffold-layout__list, main", timeout=30000)
+            except Exception as sel_err:
+                logging.warning("Standard search list selector not found, checking page content...")
+                # Save debug screenshot before raising/handling failure
+                page.screenshot(path="/tmp/linkedin_debug.png", full_page=True)
+                logging.info("Saved debug screenshot to /tmp/linkedin_debug.png")
+                raise sel_err
             # ---------------------------------------------
 
             job_cards = page.locator(".job-card-container--clickable").all()
