@@ -71,25 +71,21 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             context.storage_state(path=COOKIE_FILE)
             logging.info("LinkedIn session cookies saved successfully.")
 
-            # \033[91m# Added: Bypass direct URL bot-detection by using LinkedIn Jobs Home UI navigation\033[0m
+            # \033[91m# Added: Directly use global search bar from LinkedIn Feed instead of navigating to Jobs home page\033[0m
             time.sleep(3)
-            logging.info("Navigating to LinkedIn Jobs home page...")
-            page.goto("https://www.linkedin.com/jobs/", timeout=60000, wait_until="domcontentloaded")
-            time.sleep(3)
+            logging.info(f"Searching for role directly from feed: {job_title}")
             
-            # \033[91m# Added: Fill search input using UI interaction rather than direct URL parameters\033[0m
-            logging.info(f"Typing search query for role: {job_title}")
-            search_box = page.locator("input.jobs-search-box__keyboard-text-input").first
-            if search_box.is_visible(timeout=5000):
-                search_box.fill(job_title)
-                page.keyboard.press("Enter")
-                time.sleep(4)
-            else:
-                # Fallback input selector for global header search
-                global_search = page.locator("input.search-global-typeahead__input").first
+            global_search = page.locator("input.search-global-typeahead__input").first
+            if global_search.is_visible(timeout=10000):
+                global_search.click()
                 global_search.fill(job_title)
                 page.keyboard.press("Enter")
-                time.sleep(4)
+                time.sleep(5)
+            else:
+                # Fallback: navigate via direct search query URL since global search bar selector can change
+                search_url = f"https://www.linkedin.com/search/results/jobs/?keywords={job_title.replace(' ', '%20')}"
+                page.goto(search_url, timeout=45000, wait_until="domcontentloaded")
+                time.sleep(5)
 
             page.wait_for_selector(".jobs-search-results-list", timeout=15000)
 
