@@ -71,21 +71,34 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             context.storage_state(path=COOKIE_FILE)
             logging.info("LinkedIn session cookies saved successfully.")
 
-            # \033[91m# Added: Directly use global search bar from LinkedIn Feed instead of navigating to Jobs home page\033[0m
+            # Added: Robust search using placeholder or keyboard shortcut to avoid bot-blocking direct URLs
             time.sleep(3)
-            logging.info(f"Searching for role directly from feed: {job_title}")
+            logging.info(f"Searching for role from feed: {job_title}")
             
-            global_search = page.locator("input.search-global-typeahead__input").first
-            if global_search.is_visible(timeout=10000):
-                global_search.click()
-                global_search.fill(job_title)
-                page.keyboard.press("Enter")
+            try:
+                # Try locating the search input by placeholder or standard global class
+                search_box = page.locator("input[placeholder*='Search'], input.search-global-typeahead__input").first
+                if search_box.is_visible(timeout=5000):
+                    search_box.click()
+                    search_box.fill(job_title)
+                    page.keyboard.press("Enter")
+                else:
+                    # Fallback to keyboard shortcut '/' to focus search if selectors fail
+                    page.keyboard.press("/")
+                    time.sleep(1)
+                    page.keyboard.type(job_title)
+                    page.keyboard.press("Enter")
+                
                 time.sleep(5)
-            else:
-                # Fallback: navigate via direct search query URL since global search bar selector can change
-                search_url = f"https://www.linkedin.com/search/results/jobs/?keywords={job_title.replace(' ', '%20')}"
-                page.goto(search_url, timeout=45000, wait_until="domcontentloaded")
-                time.sleep(5)
+            except Exception as search_err:
+                logging.warning(f"UI search interaction encountered an issue: {search_err}")
+
+            # Navigate directly to the jobs search tab via UI click if results list isn't visible yet
+            if not page.locator(".jobs-search-results-list").is_visible():
+                jobs_nav = page.locator("a[href*='/jobs/']").first
+                if jobs_nav.is_visible():
+                    jobs_nav.click()
+                    time.sleep(4)
 
             page.wait_for_selector(".jobs-search-results-list", timeout=15000)
 
