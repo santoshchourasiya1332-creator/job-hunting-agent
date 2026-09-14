@@ -71,33 +71,13 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             context.storage_state(path=COOKIE_FILE)
             logging.info("LinkedIn session cookies saved successfully.")
 
-            # Modified: Navigate directly to LinkedIn Jobs home page instead of searching from the feed
-            logging.info("Navigating directly to LinkedIn Jobs page...")
-            page.goto("https://www.linkedin.com/jobs/", timeout=60000)
-            time.sleep(3)
-
-            # Added: Clean underscores from job title for search
+            # Modified: Skip UI search and go straight to the direct search results URL to prevent browser crashes
             search_keyword = job_title.replace("_", " ")
-            logging.info(f"Searching for role on Jobs page: {search_keyword}")
+            search_url = f"https://www.linkedin.com/jobs/search/?keywords={search_keyword.replace(' ', '%20')}"
             
-            try:
-                # Target the dedicated jobs search input box on the jobs home page
-                jobs_search_box = page.locator("input.jobs-search-box__keyboard-text-input, input[aria-label*='Search by title']").first
-                if jobs_search_box.is_visible(timeout=10000):
-                    jobs_search_box.click(force=True)
-                    jobs_search_box.fill(search_keyword)
-                    page.keyboard.press("Enter")
-                    time.sleep(5)
-                else:
-                    # Fallback to direct jobs search URL if input selector changes
-                    search_url = f"https://www.linkedin.com/jobs/search/?keywords={search_keyword.replace(' ', '%20')}"
-                    page.goto(search_url, timeout=30000, wait_until="domcontentloaded")
-                    time.sleep(5)
-            except Exception as search_err:
-                logging.warning(f"Jobs page search interaction encountered an issue: {search_err}. Trying direct search URL...")
-                search_url = f"https://www.linkedin.com/jobs/search/?keywords={search_keyword.replace(' ', '%20')}"
-                page.goto(search_url, timeout=30000, wait_until="domcontentloaded")
-                time.sleep(5)
+            logging.info(f"Navigating directly to search URL: {search_url}")
+            page.goto(search_url, timeout=60000, wait_until="domcontentloaded")
+            time.sleep(5)
 
             page.wait_for_selector(".jobs-search-results-list", timeout=15000)
 
