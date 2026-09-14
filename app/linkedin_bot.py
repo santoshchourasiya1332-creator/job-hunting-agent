@@ -13,6 +13,27 @@ PLAYWRIGHT_ENDPOINT = os.getenv("PLAYWRIGHT_ENDPOINT")
 # Path to store session cookies for persistence and bypassing bot detection checks
 COOKIE_FILE = "/tmp/linkedin_state.json"
 
+# Marker strings that show up in the URL when LinkedIn serves a security
+# checkpoint / verification / auth-wall page instead of the real page you asked for.
+CHALLENGE_MARKERS = ["checkpoint", "uas", "authwall", "login", "add-phone", "captcha"]
+
+
+def is_challenge_url(url: str) -> bool:
+    return any(marker in url for marker in CHALLENGE_MARKERS)
+
+
+def dump_debug_state(page, tag: str):
+    """Best-effort screenshot + URL/title dump so a hung/blocked navigation
+    can actually be diagnosed instead of just showing a bare timeout."""
+    try:
+        logging.warning(f"[debug:{tag}] current URL: {page.url}")
+        logging.warning(f"[debug:{tag}] current title: {page.title()}")
+        path = f"/tmp/linkedin_debug_{tag}.png"
+        page.screenshot(path=path, full_page=True)
+        logging.warning(f"[debug:{tag}] screenshot saved to {path}")
+    except Exception as dbg_err:
+        logging.warning(f"[debug:{tag}] could not capture debug state: {dbg_err}")
+
 # Added: Restore session cookies from Kubernetes Secret environment variable upon startup
 encoded_cookies = os.getenv("LINKEDIN_COOKIES")
 if encoded_cookies and not os.path.exists(COOKIE_FILE):
@@ -34,7 +55,8 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             context_args["storage_state"] = COOKIE_FILE
             logging.info("Found existing session cookies. Loading state to bypass login.")
 
-        if PLAYWRIGHT_ENDPOINT:
+        connected_remotely = bool(PLAYWRIGHT_ENDPOINT)
+        if connected_remotely:
             logging.info(f"Connecting to remote Playwright browser at {PLAYWRIGHT_ENDPOINT}")
             browser = p.chromium.connect(PLAYWRIGHT_ENDPOINT)
             context = browser.new_context(**context_args) # Added: Pass saved context state if available
@@ -73,20 +95,51 @@ def apply_on_linkedin(job_title: str, resume_path: str):
 
             # --- HUMAN-LIKE NAVIGATION INSTEAD OF DIRECT SEARCH URL ---
             logging.info("Navigating through UI to jobs section...")
-            
-            # Click on the Jobs icon/tab on LinkedIn feed if visible, or navigate safely
+
+            # Click on the Jobs icon/tab on LinkedIn feed if it's there, or navigate safely.
+            # NOTE: is_visible() does NOT auto-wait, so give the nav bar a real chance to
+            # hydrate before deciding it isn't there.
+            navigated_via_nav_click = False
             try:
-                # Look for Jobs nav item or fallback to typing in search
                 jobs_nav = page.locator("a[href*='/jobs/']").first
-                if jobs_nav.is_visible():
-                    jobs_nav.click()
-                    time.sleep(5)
-                else:
-                    page.goto("https://www.linkedin.com/jobs/", timeout=60000)
-                    time.sleep(5)
+                jobs_nav.wait_for(state="visible", timeout=8000)
+                jobs_nav.click()
+                navigated_via_nav_click = True
+                time.sleep(3)
             except Exception:
-                page.goto("https://www.linkedin.com/jobs/", timeout=60000)
-                time.sleep(5)
+                logging.info("Jobs nav link not found/clickable in time, falling back to direct URL.")
+
+            if not navigated_via_nav_click:
+                try:
+                    # domcontentloaded instead of the default "load" — LinkedIn's SPA pages
+                    # keep background requests running and the "load" event may never fire,
+                    # which is what was causing the 60s timeouts.
+                    page.goto("https://www.linkedin.com/jobs/", wait_until="domcontentloaded", timeout=45000)
+                except Exception as goto_err:
+                    dump_debug_state(page, "jobs_goto_failed")
+                    raise goto_err
+
+            # If LinkedIn served a checkpoint/verification/auth-wall page instead of Jobs,
+            # bot-detection was triggered — stop cleanly instead of hanging on selectors
+            # that will never appear.
+            if is_challenge_url(page.url):
+                dump_debug_state(page, "jobs_challenge")
+                logging.error(
+                    f"LinkedIn served a challenge/checkpoint page instead of Jobs (url={page.url}). "
+                    "This is bot-detection, not a selector bug — see the debug screenshot."
+                )
+                return
+
+            # Give the jobs page's own content a real target to wait for, rather than a
+            # fixed sleep + the generic "load" event.
+            try:
+                page.wait_for_selector(
+                    "input.jobs-search-box__text-input, input[aria-label*='Search'], .jobs-search-results-list",
+                    timeout=20000,
+                )
+            except Exception:
+                dump_debug_state(page, "jobs_page_not_ready")
+                logging.warning("Jobs page loaded but expected search elements never appeared.")
 
             # Type keywords into the job search box naturally
             search_keyword = job_title.replace("_", " ")
@@ -162,5 +215,14 @@ def apply_on_linkedin(job_title: str, resume_path: str):
         except Exception as e:
             logging.error(f"Error during LinkedIn automation workflow: {e}")
         finally:
-            browser.close()
+            # When connected via chromium.connect() (our shared playwright-service pod),
+            # calling browser.close() tears down that whole remote browser instance —
+            # closing just the context is enough and keeps the shared server healthy
+            # for the next cronjob run.
+            try:
+                context.close()
+            except Exception:
+                pass
+            if not connected_remotely:
+                browser.close()
             logging.info("LinkedIn automation session closed.")

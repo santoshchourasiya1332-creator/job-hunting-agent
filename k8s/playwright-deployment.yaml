@@ -40,11 +40,14 @@ spec:
         - containerPort: 3000
         resources:
           requests:
-            cpu: "100m"
-            memory: "150Mi"
-          limits:
-            cpu: "250m"
+            cpu: "150m"
             memory: "300Mi"
+          limits:
+            cpu: "400m"
+            # 300Mi was too tight for a real LinkedIn page (job listings, images, fonts,
+            # heavy JS bundle) — Chromium was likely getting OOMKilled mid-navigation,
+            # which shows up client-side as a silent hang until the goto() timeout fires.
+            memory: "600Mi"
 ---
 apiVersion: v1
 kind: Service
