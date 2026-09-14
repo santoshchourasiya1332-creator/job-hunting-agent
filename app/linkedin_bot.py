@@ -71,16 +71,21 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             context.storage_state(path=COOKIE_FILE)
             logging.info("LinkedIn session cookies saved successfully.")
 
-            # --- YAHAN PURANA CLICK/FILL WALA CODE HATA KAR DIRECT SEARCH URL NAVIGATE WALA CODE DAALA HAI ---
+            # --- UPDATED NAVIGATION & TIMEOUT HANDLING ---
             search_keyword = job_title.replace("_", " ")
             search_url = f"https://www.linkedin.com/jobs/search/?keywords={search_keyword.replace(' ', '%20')}"
             
             logging.info(f"Navigating directly to search URL: {search_url}")
-            page.goto(search_url, timeout=60000, wait_until="domcontentloaded")
-            time.sleep(5)
-
-            page.wait_for_selector(".jobs-search-results-list", timeout=15000)
-            # ---------------------------------------------------------------------------------------------------
+            
+            # Use 'commit' with higher timeout to prevent abrupt context/browser close errors
+            page.goto(search_url, timeout=90000, wait_until="commit")
+            
+            # Allow extra time for Cloudflare/LinkedIn JS challenge to pass smoothly
+            time.sleep(10)
+            
+            # Ensure page is stable before locating elements
+            page.wait_for_selector(".jobs-search-results-list", timeout=30000)
+            # ---------------------------------------------
 
             job_cards = page.locator(".job-card-container--clickable").all()
             logging.info(f"Found {len(job_cards)} job listings on page.")
@@ -128,4 +133,4 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             logging.error(f"Error during LinkedIn automation workflow: {e}")
         finally:
             browser.close()
-            logging.info("LinkedIn automation session closed.")# new lines added
+            logging.info("LinkedIn automation session closed.")
