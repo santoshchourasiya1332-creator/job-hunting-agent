@@ -71,26 +71,27 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             context.storage_state(path=COOKIE_FILE)
             logging.info("LinkedIn session cookies saved successfully.")
 
-            # Added: Robust search using force=True and direct fallback URL
+            # Added: Clean underscores from job title for search and use robust fallback
             time.sleep(3)
-            logging.info(f"Searching for role from feed: {job_title}")
+            search_keyword = job_title.replace("_", " ")
+            logging.info(f"Searching for role from feed: {search_keyword}")
             
             try:
                 search_box = page.locator("input[placeholder*='Search'], input.search-global-typeahead__input").first
                 if search_box.is_visible(timeout=5000):
                     search_box.click(force=True)
-                    search_box.fill(job_title)
+                    search_box.fill(search_keyword)
                     page.keyboard.press("Enter")
                 else:
                     page.keyboard.press("/")
                     time.sleep(1)
-                    page.keyboard.type(job_title)
+                    page.keyboard.type(search_keyword)
                     page.keyboard.press("Enter")
                 
                 time.sleep(5)
             except Exception as search_err:
                 logging.warning(f"UI search interaction encountered an issue: {search_err}. Trying direct search URL...")
-                search_url = f"https://www.linkedin.com/jobs/search/?keywords={job_title.replace(' ', '%20')}"
+                search_url = f"https://www.linkedin.com/jobs/search/?keywords={search_keyword.replace(' ', '%20')}"
                 page.goto(search_url, timeout=30000, wait_until="domcontentloaded")
                 time.sleep(5)
 
