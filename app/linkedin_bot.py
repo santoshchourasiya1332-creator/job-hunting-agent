@@ -71,36 +71,33 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             context.storage_state(path=COOKIE_FILE)
             logging.info("LinkedIn session cookies saved successfully.")
 
-            # Added: Clean underscores from job title for search and use robust fallback
+            # Modified: Navigate directly to LinkedIn Jobs home page instead of searching from the feed
+            logging.info("Navigating directly to LinkedIn Jobs page...")
+            page.goto("https://www.linkedin.com/jobs/", timeout=60000)
             time.sleep(3)
+
+            # Added: Clean underscores from job title for search
             search_keyword = job_title.replace("_", " ")
-            logging.info(f"Searching for role from feed: {search_keyword}")
+            logging.info(f"Searching for role on Jobs page: {search_keyword}")
             
             try:
-                search_box = page.locator("input[placeholder*='Search'], input.search-global-typeahead__input").first
-                if search_box.is_visible(timeout=5000):
-                    search_box.click(force=True)
-                    search_box.fill(search_keyword)
+                # Target the dedicated jobs search input box on the jobs home page
+                jobs_search_box = page.locator("input.jobs-search-box__keyboard-text-input, input[aria-label*='Search by title']").first
+                if jobs_search_box.is_visible(timeout=10000):
+                    jobs_search_box.click(force=True)
+                    jobs_search_box.fill(search_keyword)
                     page.keyboard.press("Enter")
+                    time.sleep(5)
                 else:
-                    page.keyboard.press("/")
-                    time.sleep(1)
-                    page.keyboard.type(search_keyword)
-                    page.keyboard.press("Enter")
-                
-                time.sleep(5)
+                    # Fallback to direct jobs search URL if input selector changes
+                    search_url = f"https://www.linkedin.com/jobs/search/?keywords={search_keyword.replace(' ', '%20')}"
+                    page.goto(search_url, timeout=30000, wait_until="domcontentloaded")
+                    time.sleep(5)
             except Exception as search_err:
-                logging.warning(f"UI search interaction encountered an issue: {search_err}. Trying direct search URL...")
+                logging.warning(f"Jobs page search interaction encountered an issue: {search_err}. Trying direct search URL...")
                 search_url = f"https://www.linkedin.com/jobs/search/?keywords={search_keyword.replace(' ', '%20')}"
                 page.goto(search_url, timeout=30000, wait_until="domcontentloaded")
                 time.sleep(5)
-
-            # Navigate directly to the jobs search tab via UI click if results list isn't visible yet
-            if not page.locator(".jobs-search-results-list").is_visible():
-                jobs_nav = page.locator("a[href*='/jobs/']").first
-                if jobs_nav.is_visible():
-                    jobs_nav.click()
-                    time.sleep(4)
 
             page.wait_for_selector(".jobs-search-results-list", timeout=15000)
 
