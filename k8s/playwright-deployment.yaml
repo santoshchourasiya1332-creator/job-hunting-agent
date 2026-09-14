@@ -28,6 +28,14 @@ spec:
         - "3000"
         - --host
         - "0.0.0.0"
+        - --browser
+        - chromium
+        args:
+        - --disable-blink-features=AutomationControlled
+        - --no-sandbox
+        - --disable-setuid-sandbox
+        - --disable-infobars
+        - --window-size=1920,1080
         ports:
         - containerPort: 3000
         resources:

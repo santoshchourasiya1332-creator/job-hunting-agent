@@ -71,18 +71,39 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             context.storage_state(path=COOKIE_FILE)
             logging.info("LinkedIn session cookies saved successfully.")
 
-            # --- UPDATED NAVIGATION & TIMEOUT HANDLING ---
+            # --- HUMAN-LIKE NAVIGATION INSTEAD OF DIRECT SEARCH URL ---
+            logging.info("Navigating through UI to jobs section...")
+            
+            # Click on the Jobs icon/tab on LinkedIn feed if visible, or navigate safely
+            try:
+                # Look for Jobs nav item or fallback to typing in search
+                jobs_nav = page.locator("a[href*='/jobs/']").first
+                if jobs_nav.is_visible():
+                    jobs_nav.click()
+                    time.sleep(5)
+                else:
+                    page.goto("https://www.linkedin.com/jobs/", timeout=60000)
+                    time.sleep(5)
+            except Exception:
+                page.goto("https://www.linkedin.com/jobs/", timeout=60000)
+                time.sleep(5)
+
+            # Type keywords into the job search box naturally
             search_keyword = job_title.replace("_", " ")
-            search_url = f"https://www.linkedin.com/jobs/search/?keywords={search_keyword.replace(' ', '%20')}"
+            logging.info(f"Typing search keyword: {search_keyword}")
             
-            logging.info(f"Navigating directly to search URL: {search_url}")
+            # Wait for search input field and type slowly like a human
+            search_input = page.locator("input.jobs-search-box__text-input, input[aria-label*='Search']").first
+            search_input.click()
+            time.sleep(1)
+            search_input.fill(search_keyword)
+            time.sleep(2)
+            page.keyboard.press("Enter")
             
-            # Use 'commit' with higher timeout to prevent abrupt context/browser close errors
-            page.goto(search_url, timeout=90000, wait_until="commit")
-            
-            # Allow extra time for Cloudflare/LinkedIn JS challenge to pass smoothly
-            time.sleep(10)
-            
+            # Allow results to load
+            time.sleep(8)
+            # ---------------------------------------------------------
+
             # Ensure page is stable before locating elements using multiple fallback selectors
             try:
                 page.wait_for_selector(".jobs-search-results-list, .scaffold-layout__list, main", timeout=30000)
@@ -95,7 +116,6 @@ def apply_on_linkedin(job_title: str, resume_path: str):
                 except Exception as ss_err:
                     logging.warning(f"Could not take debug screenshot because browser closed: {ss_err}")
                 raise sel_err
-            # ---------------------------------------------
 
             job_cards = page.locator(".job-card-container--clickable").all()
             logging.info(f"Found {len(job_cards)} job listings on page.")
