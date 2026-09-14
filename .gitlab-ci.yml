@@ -93,25 +93,20 @@ build:
     - main
 
 # -------------------------------------------------------------------
-# 4. KUBERNETES DEPLOYMENT OVER SSH TUNNEL
+# 4. KUBERNETES DEPLOYMENT VIA KUBE_CONFIG
 # -------------------------------------------------------------------
 deploy:
   stage: deploy
   image: alpine:latest
   before_script:
-    - apk add --no-cache openssh-client curl helm
+    - apk add --no-cache curl helm
     - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
     - chmod +x kubectl && mv kubectl /usr/local/bin/
-    - eval $(ssh-agent -s)
-    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
-    - ssh-keyscan -H $EC2_PUBLIC_IP >> ~/.ssh/known_hosts
   script:
+    # Yahan add karna hai base64 decode wala block:
     - mkdir -p ~/.kube
-    
-    # K3s initialization & health-check loop
-    - echo "Waiting for K3s service to initialize on EC2..."
-    - ssh ubuntu@$EC2_PUBLIC_IP "sudo cat /etc/rancher/k3s/k3s.yaml" | sed "s/127.0.0.1/$EC2_PUBLIC_IP/g" > ~/.kube/config
+    - echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config
+    - chmod 600 ~/.kube/config
     
     - echo "Waiting for Kubernetes API server to accept connections..."
     - |

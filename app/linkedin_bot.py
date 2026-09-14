@@ -71,7 +71,7 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             context.storage_state(path=COOKIE_FILE)
             logging.info("LinkedIn session cookies saved successfully.")
 
-            # Modified: Skip UI search and go straight to the direct search results URL to prevent browser crashes
+            # --- YAHAN PURANA CLICK/FILL WALA CODE HATA KAR DIRECT SEARCH URL NAVIGATE WALA CODE DAALA HAI ---
             search_keyword = job_title.replace("_", " ")
             search_url = f"https://www.linkedin.com/jobs/search/?keywords={search_keyword.replace(' ', '%20')}"
             
@@ -80,6 +80,7 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             time.sleep(5)
 
             page.wait_for_selector(".jobs-search-results-list", timeout=15000)
+            # ---------------------------------------------------------------------------------------------------
 
             job_cards = page.locator(".job-card-container--clickable").all()
             logging.info(f"Found {len(job_cards)} job listings on page.")
@@ -127,4 +128,4 @@ def apply_on_linkedin(job_title: str, resume_path: str):
             logging.error(f"Error during LinkedIn automation workflow: {e}")
         finally:
             browser.close()
-            logging.info("LinkedIn automation session closed.")
+            logging.info("LinkedIn automation session closed.")# new lines added
