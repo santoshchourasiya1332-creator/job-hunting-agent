@@ -88,9 +88,12 @@ def apply_on_linkedin(job_title: str, resume_path: str):
                 page.wait_for_selector(".jobs-search-results-list, .scaffold-layout__list, main", timeout=30000)
             except Exception as sel_err:
                 logging.warning("Standard search list selector not found, checking page content...")
-                # Save debug screenshot before raising/handling failure
-                page.screenshot(path="/tmp/linkedin_debug.png", full_page=True)
-                logging.info("Saved debug screenshot to /tmp/linkedin_debug.png")
+                # Safe screenshot capture wrapped in try-except to avoid crash if context closes
+                try:
+                    page.screenshot(path="/tmp/linkedin_debug.png", full_page=True)
+                    logging.info("Saved debug screenshot to /tmp/linkedin_debug.png")
+                except Exception as ss_err:
+                    logging.warning(f"Could not take debug screenshot because browser closed: {ss_err}")
                 raise sel_err
             # ---------------------------------------------
 
